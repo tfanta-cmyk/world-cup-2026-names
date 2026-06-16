@@ -38,8 +38,7 @@ body{font-family:'Inter','Helvetica Neue',Arial,sans-serif;background:#f7f6f2;co
 /* NAMES */
 .names-controls{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
 .names-controls label{font-size:13px;color:#555;}
-.names-controls input[type=range]{width:160px;accent-color:#7c3aed;}
-.names-controls span.count-label{font-size:13px;font-weight:600;color:#7c3aed;min-width:28px;}
+
 .search-wrap{position:relative;margin-left:auto;}
 .search-wrap input[type=text]{border:1px solid #d1d5db;border-radius:6px;padding:6px 10px 6px 32px;font-size:13px;font-family:inherit;width:200px;background:#fff;color:#1a1a1a;outline:none;}
 .search-wrap input[type=text]:focus{border-color:#7c3aed;}
@@ -116,10 +115,22 @@ body{font-family:'Inter','Helvetica Neue',Arial,sans-serif;background:#f7f6f2;co
   <div id="sec-names" class="section visible">
     <p class="section-label label-names">Most common first names — 1930 to 2026</p>
     <div class="names-controls">
-      <label>Show top</label>
-      <input type="range" id="nameCount" min="10" max="100" step="1" value="31" oninput="updateNames()">
-      <span class="count-label" id="nameCountLabel">31</span>
-      <label>names</label>
+      <label>Show:</label>
+      <select id="nameRange" onchange="setRange(this.value)" style="font-size:13px;font-family:inherit;padding:5px 8px;border-radius:6px;border:1px solid #d1d5db;color:#333;background:#fff;cursor:pointer;outline:none;">
+        <option value="top:25">Top 25</option>
+        <option value="top:50">Top 50</option>
+        <option value="top:100">Top 100</option>
+        <option value="range:1:100">Ranks 1–100</option>
+        <option value="range:101:200">Ranks 101–200</option>
+        <option value="range:201:300">Ranks 201–300</option>
+        <option value="range:301:400">Ranks 301–400</option>
+        <option value="range:401:500">Ranks 401–500</option>
+        <option value="range:501:700">Ranks 501–700</option>
+        <option value="range:701:1000">Ranks 701–1000</option>
+        <option value="range:1001:1500">Ranks 1001–1500</option>
+        <option value="range:1501:2000">Ranks 1501–2000</option>
+        <option value="range:2001:3759">Ranks 2001–3759</option>
+      </select>
       <div class="search-wrap">
         <span class="search-icon">&#9906;</span>
         <input type="text" id="nameSearch" placeholder="Search all names…" oninput="updateNames()">
@@ -925,11 +936,29 @@ const signTotal = SIGNS.reduce((a,b)=>a+b.n,0);
 
 function cap(s){return s.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');}
 
+var currentRangeStart = 0;
+var currentRangeEnd = 25;
+function setRange(val){
+  document.getElementById('nameSearch').value = '';
+  if(val.startsWith('top:')){
+    currentRangeStart = 0;
+    currentRangeEnd = parseInt(val.split(':')[1]);
+  } else {
+    const parts = val.split(':');
+    currentRangeStart = parseInt(parts[1]) - 1;
+    currentRangeEnd = parseInt(parts[2]);
+  }
+  updateNames();
+}
 function updateNames(){
-  const count = parseInt(document.getElementById('nameCount').value);
-  document.getElementById('nameCountLabel').textContent = count;
   const q = document.getElementById('nameSearch').value.trim().toLowerCase();
-  let data = q ? ALL_NAMES.filter(d=>d[0].includes(q)) : ALL_NAMES.slice(0,count);
+  let data;
+  if(q){
+    data = ALL_NAMES.filter(d=>d[0].includes(q));
+  } else {
+    data = ALL_NAMES.slice(currentRangeStart, currentRangeEnd);
+  }
+  const rankOffset = q ? 0 : currentRangeStart;
   const maxVal = ALL_NAMES[0][1];
   const html = data.map((d,i)=>{
     const pct = (d[1]/maxVal*100).toFixed(1);
@@ -939,7 +968,7 @@ function updateNames(){
     const tipAttr = hasFamous ? `onmouseenter="showTip(event,'${tipHtml.replace(/'/g,"\\'")}','${cap(d[0])}')" onmouseleave="hideTip()"` : '';
     return `<div class="name-entry">
       <div class="name-row">
-        <span class="name-rank">${q?'':i+1}</span>
+        <span class="name-rank">${q?'':i+1+rankOffset}</span>
         <span class="name-label">${cap(d[0])}</span>
         <div class="name-bar-wrap" ${tipAttr}>
           <div class="name-bar" style="width:${pct}%"></div>
